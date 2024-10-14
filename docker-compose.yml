@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  fastapi-openai-service:
+    build: .
+    container_name: fastapi_openai_service
+    env_file: 
+      - .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
