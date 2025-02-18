@@ -5,12 +5,15 @@ import os
 import openai
 from openai import AsyncOpenAI
 import asyncio
+import anthropic
+
 
 # Load environment variables from the .env file
 load_dotenv()
 
 # Get OpenAI API key and port from the environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 PORT = int(os.getenv("PORT", 8000))
 
@@ -45,8 +48,17 @@ class OpenAIClient:
 
 # Input model for request body
 class OpenAIRequest(BaseModel):
+    """Version 1"""
     model_name: str
     messages: list[dict[str, str]]
+
+
+class ClaudeRequest(BaseModel):
+    """Version 1"""
+    model_name: str
+    messages: list[dict[str, str]]
+    max_tokens: int = 1000
+    temperature: float = 0.2
 
 # FastAPI instance
 app = FastAPI()
@@ -68,7 +80,30 @@ async def open_ai_request(
     )
     return {"response": result}
 
+
+# Route to handle Claude requests
+@app.post("/api/claude_request")
+async def claude_request(
+    claud_request: OpenAIRequest, token: None = Depends(verify_token)
+):
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        message = await asyncio.to_thread(
+            client.messages.create,
+            model=claud_request.model_name,
+            max_tokens=1000,
+            temperature=0,
+            system="You are a world-class poet. Respond only with short poems.",
+            messages=claud_request.messages
+        )
+        return {"response": message.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # To run the app, add this if you are running manually
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=PORT)
+
