@@ -84,20 +84,19 @@ async def open_ai_request(
 # Route to handle Claude requests
 @app.post("/api/claude_request")
 async def claude_request(
-    claud_request: OpenAIRequest, token: None = Depends(verify_token)
+    claud_request: ClaudeRequest, token: None = Depends(verify_token)
 ):
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        message = await asyncio.to_thread(
-            client.messages.create,
+        message = client.messages.create(
+            messages=claud_request.messages,
             model=claud_request.model_name,
-            max_tokens=1000,
-            temperature=0,
-            system="You are a world-class poet. Respond only with short poems.",
-            messages=claud_request.messages
+            max_tokens=claud_request.max_tokens,
+            temperature=claud_request.temperature,
         )
-        return {"response": message.content}
+        return {"response": message.content[0].text}
     except Exception as e:
+        print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
